@@ -85,8 +85,64 @@ cargo install drift
 Pre-built binaries for Linux and macOS (x86_64 and aarch64) are available on the
 [GitHub Releases](https://github.com/gmr/drift/releases) page.
 
-The binary needs no `git` on `PATH`: everything runs in-process through
-[gix](https://github.com/GitoxideLabs/gitoxide).
+### Docker
+
+Multi-arch container images (`linux/amd64`, `linux/arm64`) are published to the
+GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/gmr/drift:latest
+```
+
+Available tags:
+
+- `latest` — most recent commit on `main`
+- `main` — alias for `latest`
+- `<version>`, `<major>.<minor>`, `<major>` — tagged releases (e.g. `1.1.0`, `1.1`, `1`)
+
+The binary is installed at `/usr/local/bin/drift` and is the image's entrypoint, so
+arguments go straight to `docker run`. Mount the repository and set the working
+directory to it:
+
+```bash
+docker run --rm -v "$PWD:/repo:ro" -w /repo ghcr.io/gmr/drift:latest --tree 1.1.0 main
+```
+
+The mount can be read-only: `drift` never writes to the repository. It does need
+real history, so a shallow clone will fail to resolve the older ref.
+
+#### Copy the binary into your own image
+
+The binary is statically linked against musl and depends on nothing at runtime, not
+even `git`, so it can be copied into any base image with a `COPY --from=` directive.
+This is the recommended pattern: your image keeps its own base, and `drift` rides
+along.
+
+```dockerfile
+FROM python:3.13-slim
+
+COPY --from=ghcr.io/gmr/drift:latest /usr/local/bin/drift /usr/local/bin/drift
+
+COPY my-app /usr/local/bin/my-app
+```
+
+That works in glibc images as well as musl ones, because nothing is dynamically
+linked.
+
+#### Use it as a base image
+
+If you have no base image preference, build `FROM` it directly. It is Alpine plus
+the binary, around 14 MB.
+
+```dockerfile
+FROM ghcr.io/gmr/drift:latest
+COPY my-script.sh /usr/local/bin/my-script.sh
+ENTRYPOINT ["my-script.sh"]
+```
+
+Everything runs in-process through
+[gix](https://github.com/GitoxideLabs/gitoxide), so no installation of `drift`
+needs `git` on `PATH`.
 
 ## Usage
 
