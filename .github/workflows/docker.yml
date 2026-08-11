@@ -9,9 +9,19 @@ on:
 
 permissions: {}
 
+# A superseded run has nothing to say, and an emulated build is too slow to leave
+# running for the sake of an answer nobody will read.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # A pull request only has to prove the image still builds, so it publishes nothing
   # and is handed no token scope that could publish.
+  #
+  # amd64 only, and no QEMU: it is native on this runner. The crate is pure Rust with
+  # no arch-specific code, so an arm64 break that amd64 misses is unlikely enough to
+  # be worth catching after the merge instead of emulating arm64 on every pull request.
   build:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -23,14 +33,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: docker/setup-qemu-action@v4
-
       - uses: docker/setup-buildx-action@v4
 
       - uses: docker/build-push-action@v7
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max

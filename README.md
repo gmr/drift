@@ -111,8 +111,14 @@ docker run --rm -v "$PWD:/repo:ro" -w /repo ghcr.io/gmr/drift:latest --tree 1.1.
 The mount can be read-only: `drift` never writes to the repository. It does need
 real history, so a shallow clone will fail to resolve the older ref.
 
-The image runs as an unprivileged user, uid 65532, so the mounted repository has to
-be readable by it. Pass `--user "$(id -u):$(id -g)"` if your checkout is not.
+The image runs as an unprivileged user, uid 65532, not as root. A bind-mounted
+repository therefore has to be readable by that uid. A normal checkout is, but if
+yours is not, run as yourself instead:
+
+```bash
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo:ro" -w /repo \
+  ghcr.io/gmr/drift:latest --tree 1.1.0 main
+```
 
 #### Copy the binary into your own image
 
