@@ -2,8 +2,9 @@ name: Release
 
 on:
   release:
-    # `created` also fires when a draft is saved, which would build and upload assets
-    # for a release nobody can download yet, and would never fire again on publish.
+    # `created` never fires for a draft at all, and publishing the draft later does not
+    # fire it either, so a draft-then-publish release would silently never build.
+    # `published` covers both that path and a release published outright.
     types: [published]
 
 permissions: {}
@@ -41,8 +42,9 @@ jobs:
 
       - name: Check the tag against the crate version
         run: |
-          # cargo publish ships whatever Cargo.toml says, so a tag that disagrees with
-          # the manifest would publish one version while the assets claim another.
+          # The asset names and the Homebrew formula both carry the tag, while --version
+          # reports the manifest, so a tag that disagrees with Cargo.toml would ship a
+          # binary that contradicts the release it came from.
           version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
           if [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
             echo "tag '${GITHUB_REF_NAME}' does not match Cargo.toml version '${version}'" >&2
