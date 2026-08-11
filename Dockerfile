@@ -24,6 +24,11 @@ FROM alpine:${ALPINE_VERSION}
 
 COPY --from=builder /src/target/release/drift /usr/local/bin/drift
 
+# drift only ever reads a repository, so it needs no privileges of its own. A mounted
+# repository has to be readable by this user; `docker run --user` overrides it.
+RUN adduser -D -H -u 65532 drift
+USER 65532:65532
+
 # The binary is static, so it also works copied into any other base image with
 # COPY --from=ghcr.io/gmr/drift:latest /usr/local/bin/drift /usr/local/bin/drift
 ENTRYPOINT ["/usr/local/bin/drift"]
