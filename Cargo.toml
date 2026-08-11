@@ -1,11 +1,11 @@
 [package]
 name = "drift"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 rust-version = "1.88"
-description = "Detect drift between two git refs, ignoring paths listed in .driftignore"
+description = "Find the changes between two git refs that matter, ignoring the paths in .driftignore"
 license = "BSD-3-Clause"
-repository = "https://github.com/gmr/drift-detector"
+repository = "https://github.com/gmr/drift"
 keywords = ["git", "drift", "cli", "gitops"]
 categories = ["command-line-utilities", "development-tools"]
 
@@ -15,7 +15,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.6.6", features = ["derive"] }
-gix = { version = "0.86.0", default-features = false, features = ["max-performance-safe", "revision", "blob-diff"] }
+gix = { version = "0.86.0", features = ["blob-diff", "revision", "max-performance-safe"] }
 ignore = "0.4.33"
 jiff = "0.2.35"
 serde = { version = "1.0.229", features = ["derive"] }
@@ -25,4 +25,5 @@ thiserror = "2.0.20"
 [dev-dependencies]
 assert_cmd = "2.2.2"
 predicates = "3.1.4"
+serde_json = "1.0.151"
 tempfile = "3.27.0"
