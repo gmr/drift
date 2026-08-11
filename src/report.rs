@@ -83,8 +83,9 @@ pub struct Report {
     /// Every drifting path, sorted.
     pub drift_paths: Vec<String>,
     /// Drifting paths that no commit in the range explains, sorted. Only `tree` mode
-    /// can produce these, and only when the refs have diverged: the difference comes
-    /// from the `from` side.
+    /// can produce these. Either the difference comes from the `from` side, which means
+    /// the refs diverged, or a merge commit wrote the content itself, which needs no
+    /// divergence because a merge is never classified.
     pub unattributed_paths: Vec<String>,
     pub oldest_drift: Option<DriftBound>,
     pub newest_drift: Option<DriftBound>,

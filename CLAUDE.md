@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 `drift` reports commits between two git refs that changed paths `.driftignore`
-does not cover. See [README.md](README.md) for the user facing contract, and
+does not cover. See [README.md](README.md) for the user-facing contract, and
 treat the "Defined behavior" section there as the specification: any change to
 range, merge, rename, age, or ordering semantics updates that section in the
 same commit.

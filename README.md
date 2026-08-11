@@ -20,7 +20,7 @@ The output is JSON, on stdout, one object per run. It is meant to be piped into
 In managing deployments across environments, it can be useful to know if there
 are meaningful changes in the codebase that have not made it to the production.
 Determining what constitutes drift can be challenging, for example if you have
-a documentation only change in the repo, do you really care if the applicaiton
+a documentation-only change in the repo, do you really care if the application
 has been deployed based on that commit?
 
 `drift` is a tool to detect if the things you care about in a repo have changed.
@@ -40,8 +40,7 @@ a deploy, and how long has it been waiting".
 ### Homebrew (macOS / Linux)
 
 ```bash
-brew tap gmr/utils
-brew install drift
+brew install gmr/utils/drift
 ```
 
 > [!NOTE]
@@ -91,7 +90,7 @@ The binary needs no `git` on `PATH`: everything runs in-process through
 
 ## Usage
 
-```
+```text
 drift [OPTIONS] <FROM> <TO>
 
 Arguments:
@@ -303,7 +302,9 @@ Note which side of the line `uv.lock` is on: it is *not* listed, because an upda
 lock file can mean a security fix that should ship, while the `pyproject.toml` edit
 that produced it says nothing on its own.
 
-Patterns are anchored at the repository root and use gitignore syntax:
+Patterns use gitignore syntax and are evaluated against paths relative to the
+repository root. A pattern containing a slash is anchored; one without a slash
+matches that name at any depth:
 
 | Pattern          | Matches                                       |
 | ---------------- | --------------------------------------------- |
@@ -351,12 +352,19 @@ no commit and no age, because no commit in `from..to` explains them. Swapping th
 two refs is the usual cause; the report saying `diverged` with everything
 unattributed is what that mistake looks like.
 
+**Unattributed paths.** `unattributed_paths` holds the `--tree` mode paths that
+differ between the two trees and that no classified commit in the range touched.
+Divergence is one cause. A merge commit that wrote content of its own is the
+other, and it needs no divergence: the merge is never classified, so its
+resolution has no commit to carry it.
+
 **Merges.** Merge commits, meaning commits with more than one parent, are
 traversed but never classified. A merge carries no change of its own that is not
 already in a commit on one of its sides, and the walk reaches those commits
 through it. They are counted under `merge_commits_skipped`. A conflict resolution
-written into the merge commit itself is therefore not reported; make it a separate
-commit if it needs to be visible.
+written into the merge commit itself is therefore never attributed to a commit:
+`--log` mode does not report it at all, and `--tree` mode reports the path under
+`unattributed_paths`. Make it a separate commit if it needs an author and an age.
 
 **Root commits.** A commit with no parent is diffed against the empty tree, so
 every file it adds counts.
@@ -368,7 +376,9 @@ This keeps the result independent of similarity thresholds and of local diff
 configuration.
 
 **Paths.** Only file paths are examined. Directory entries in the diff are
-dropped, because the diff also yields every file below them.
+dropped, because the diff also yields every file below them. A path that is not
+valid UTF-8 is an error rather than a lossy conversion, so two different paths can
+never collapse into one report entry.
 
 **Ages.** Both ages are the seconds between the commit's _committer_ timestamp
 and the moment the run started. A single clock reading is used for both, so

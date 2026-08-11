@@ -221,6 +221,35 @@ fn merges_are_skipped_but_their_commits_are_scanned() {
 }
 
 #[test]
+fn a_merge_that_writes_its_own_content_leaves_an_unattributed_path() {
+    let (mut fixture, base) = baseline();
+    fixture.git(&["checkout", "-b", "side"]);
+    fixture.write("src/side.rs", "// side\n");
+    let side = fixture.commit("Add the side file");
+    fixture.git(&["checkout", "main"]);
+    fixture.write("src/main.rs", "fn main() { drift() }\n");
+    let touched = fixture.commit("Touch main");
+
+    // An evil merge: content that is in neither parent, written into the merge commit
+    // the way a conflict resolution is.
+    fixture.git(&["merge", "--no-ff", "--no-commit", "side"]);
+    fixture.write("src/resolved.rs", "// written by the merge itself\n");
+    let head = fixture.commit("Merge side and resolve");
+
+    // base is an ancestor of head, so nothing diverged, yet the merge's own file has no
+    // commit to carry it because merges are never classified.
+    let report = fixture.report_with(&["--tree"], &base, &head);
+    assert_eq!(report["diverged"], false);
+    assert_eq!(report["merge_commits_skipped"], 1);
+    assert_eq!(
+        report["unattributed_paths"],
+        serde_json::json!(["src/resolved.rs"])
+    );
+    // Both non-merge commits still report their own paths, newest first.
+    assert_eq!(report["drift_commits"], serde_json::json!([touched, side]));
+}
+
+#[test]
 fn a_missing_driftignore_makes_every_change_drift() {
     let mut fixture = Fixture::new();
     fixture.write("README.md", "hello\n");
@@ -358,8 +387,18 @@ fn the_log_flag_is_the_default_mode() {
     fixture.write("src/lib.rs", "pub fn drift() {}\n");
     let head = fixture.commit("Add a library");
 
-    let explicit = fixture.report_with(&["--log"], &base, &head);
-    assert_eq!(explicit, fixture.report(&base, &head));
+    let mut explicit = fixture.report_with(&["--log"], &base, &head);
+    let mut default = fixture.report(&base, &head);
+
+    // Each run takes its own clock reading, so an age can differ by a second between
+    // them. Everything the mode decides is what has to match.
+    for report in [&mut explicit, &mut default] {
+        for bound in ["oldest_drift", "newest_drift"] {
+            report[bound]["age_seconds"] = Value::Null;
+        }
+    }
+
+    assert_eq!(explicit, default);
     assert_eq!(explicit["mode"], "log");
 }
 

@@ -52,9 +52,8 @@ impl DriftIgnore {
                 })?;
         }
         Ok(Self {
-            matcher: builder.build().map_err(|source| Error::IgnorePattern {
+            matcher: builder.build().map_err(|source| Error::IgnoreBuild {
                 path: FILE_NAME.to_string(),
-                line: 0,
                 source: Box::new(source),
             })?,
             present: true,
@@ -68,7 +67,9 @@ impl DriftIgnore {
 
     /// Whether `path`, relative to the repository root, is expected to change.
     ///
-    /// A negated pattern (`!keep-me`) wins over an earlier match, as in gitignore.
+    /// A negated pattern (`!keep-me`) wins over an earlier match, and it re-includes a
+    /// path even when an earlier pattern excluded a parent directory. Git ignores a
+    /// negation in that position; the README records the difference as deliberate.
     pub fn is_ignored(&self, path: &str) -> bool {
         self.matcher
             .matched_path_or_any_parents(path, false)

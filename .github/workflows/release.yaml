@@ -4,11 +4,14 @@ on:
   release:
     types: [created]
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
   build:
+    # Only this job writes to the repository, to upload the release assets.
+    permissions:
+      contents: write
+
     strategy:
       matrix:
         include:
@@ -26,6 +29,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -34,7 +39,7 @@ jobs:
 
       - name: Install cross (Linux aarch64)
         if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: cargo install cross --git https://github.com/cross-rs/cross
+        run: cargo install cross --locked --version 0.2.5
 
       - name: Build (native)
         if: matrix.target != 'aarch64-unknown-linux-gnu'
@@ -62,7 +67,14 @@ jobs:
     steps:
       - name: Get release version
         id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        run: |
+          # A git tag may hold shell-significant characters, and this value reaches a
+          # shell and a commit message, so accept only a plain semver tag.
+          if ! printf '%s' "$GITHUB_REF_NAME" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "refusing to release from tag '$GITHUB_REF_NAME': expected vMAJOR.MINOR.PATCH" >&2
+            exit 1
+          fi
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Download release assets and compute checksums
         id: checksums
@@ -99,9 +111,11 @@ jobs:
           sed -i "/x86_64-unknown-linux-gnu/{n;s/sha256 \".*\"/sha256 \"${SHA_X86_64_LINUX}\"/;}" Formula/drift.rb
 
       - name: Commit and push
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/drift.rb
-          git commit -m "Update drift to ${{ steps.version.outputs.version }}"
+          git commit -m "Update drift to ${VERSION}"
           git push

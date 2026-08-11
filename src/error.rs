@@ -28,8 +28,33 @@ pub enum Error {
         source: Box<ignore::Error>,
     },
 
+    #[error("{path}: cannot build the ignore matcher")]
+    IgnoreBuild {
+        path: String,
+        #[source]
+        source: Box<ignore::Error>,
+    },
+
     #[error("{path} is not valid UTF-8")]
     IgnoreEncoding { path: String },
+
+    #[error("the path {path} is not valid UTF-8")]
+    PathEncoding { path: String },
+
+    #[error("`{from}` and `{to}` share no common ancestor")]
+    MergeBase {
+        from: String,
+        to: String,
+        #[source]
+        source: BoxedError,
+    },
+
+    #[error("commit {sha} has a timestamp outside the supported range")]
+    CommitTime {
+        sha: String,
+        #[source]
+        source: BoxedError,
+    },
 
     #[error("cannot serialize the report")]
     Json(#[from] serde_json::Error),

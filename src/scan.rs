@@ -49,7 +49,11 @@ pub fn analyze(
     // what leaves paths no commit in the range explains.
     let base = repo
         .merge_base(from_commit.id, to_commit.id)
-        .map_err(git)?
+        .map_err(|source| Error::MergeBase {
+            from: from.to_string(),
+            to: to.to_string(),
+            source: Box::new(source),
+        })?
         .detach();
     let diverged = base != from_commit.id;
 
@@ -111,8 +115,12 @@ pub fn analyze(
         commits.push(DriftCommit {
             sha: commit.id().to_hex().to_string(),
             author: format!("{} <{}>", author.name, author.email),
-            committed_at: Timestamp::from_second(time.seconds)
-                .map_err(|source| Error::Git(Box::new(source) as crate::error::BoxedError))?,
+            committed_at: Timestamp::from_second(time.seconds).map_err(|source| {
+                Error::CommitTime {
+                    sha: commit.id().to_hex().to_string(),
+                    source: Box::new(source),
+                }
+            })?,
             paths: drifting,
         });
     }
@@ -178,6 +186,18 @@ fn changed_paths(
     diff_paths(repo, old_tree.as_ref(), &new_tree, options)
 }
 
+/// A git path as a `String`, refusing anything that is not valid UTF-8.
+///
+/// A lossy conversion would map two distinct paths onto the same replacement text, which
+/// would then dedup into one report entry and match the wrong `.driftignore` pattern.
+fn path_string(location: &gix::bstr::BStr) -> Result<String> {
+    std::str::from_utf8(location)
+        .map(str::to_owned)
+        .map_err(|_| Error::PathEncoding {
+            path: location.to_string(),
+        })
+}
+
 /// The file paths that differ between two trees.
 ///
 /// Directory entries are dropped because the diff also yields every file below them.
@@ -196,14 +216,14 @@ fn diff_paths(
         if change.entry_mode().is_tree() {
             continue;
         }
-        paths.push(change.location().to_string());
+        paths.push(path_string(change.location())?);
         if let ChangeDetached::Rewrite {
             source_location, ..
         } = change
         {
             // Unreachable while rewrite tracking is off, kept so enabling it cannot
             // silently drop the source side of a rename.
-            paths.push(source_location.to_string());
+            paths.push(path_string(source_location.as_ref())?);
         }
     }
     paths.sort();
