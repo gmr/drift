@@ -77,7 +77,7 @@ VERSION=v1.0.0 curl -fsSL https://raw.githubusercontent.com/gmr/drift/main/insta
 ### From Source (via Cargo)
 
 ```bash
-cargo install drift
+cargo install --git https://github.com/gmr/drift
 ```
 
 ### Download Binaries

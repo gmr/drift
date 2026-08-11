@@ -8,6 +8,9 @@ license = "BSD-3-Clause"
 repository = "https://github.com/gmr/drift"
 keywords = ["git", "drift", "cli", "gitops"]
 categories = ["command-line-utilities", "development-tools"]
+# The crates.io name `drift` belongs to another project, so distribution is by
+# GitHub Releases, Homebrew, the install script, and GHCR.
+publish = false
 
 [[bin]]
 name = "drift"
