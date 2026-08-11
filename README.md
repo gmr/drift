@@ -159,8 +159,8 @@ a tag cut from `main` would carry exactly one meaningful file.
 
 Not every tag sits on the line of the branch you are comparing it to. A `1.1.1`
 cut from a release branch, with a hotfix that was never merged back, is not an
-ancestor of `main`. When neither ref is an ancestor of the other, the report sets
-`diverged` to `true`.
+ancestor of `main`. Whenever the older ref is not an ancestor of the newer one,
+the report sets `diverged` to `true`.
 
 In `--tree` mode a divergence can leave paths that differ but that **no commit in
 the range explains**, because the difference comes from the older ref's side.
@@ -212,7 +212,7 @@ $ drift 1.1.0 main --pretty
   "unattributed_paths": [],
   "oldest_drift": {
     "sha": "9a8b7c6d5e4f30211203f4e5d6c7b8a998877665",
-    "committed_at": "2026-07-28T14:02:11Z",
+    "committed_at": "2026-07-28T10:45:40Z",
     "age_seconds": 1209600
   },
   "newest_drift": {
@@ -230,7 +230,7 @@ $ drift 1.1.0 main --pretty
     {
       "sha": "9a8b7c6d5e4f30211203f4e5d6c7b8a998877665",
       "author": "Bob Builder <bob@example.com>",
-      "committed_at": "2026-07-28T14:02:11Z",
+      "committed_at": "2026-07-28T10:45:40Z",
       "paths": ["src/handlers.py"]
     }
   ]
