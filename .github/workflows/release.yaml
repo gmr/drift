@@ -2,7 +2,9 @@ name: Release
 
 on:
   release:
-    types: [created]
+    # `created` also fires when a draft is saved, which would build and upload assets
+    # for a release nobody can download yet, and would never fire again on publish.
+    types: [published]
 
 permissions: {}
 
