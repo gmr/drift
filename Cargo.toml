@@ -1,6 +1,6 @@
 [package]
 name = "drift"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2024"
 rust-version = "1.88"
 description = "Find the changes between two git refs that matter, ignoring the paths in .driftignore"
