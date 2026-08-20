@@ -81,6 +81,7 @@ pub fn analyze(
 
     let mut scanned = 0usize;
     let mut merges = 0usize;
+    let mut ignored = 0usize;
     let mut commits = Vec::new();
     let mut attributed = BTreeSet::new();
 
@@ -92,9 +93,16 @@ pub fn analyze(
             merges += 1;
             continue;
         }
-        scanned += 1;
 
         let commit = info.object().map_err(git)?;
+        if has_ignore_trailer(&commit)? {
+            // The author has already vouched for this change; it carries no drift of
+            // its own to attribute.
+            ignored += 1;
+            continue;
+        }
+        scanned += 1;
+
         let changed = changed_paths(repo, &commit, options)?;
         let drifting: Vec<String> = changed
             .into_iter()
@@ -139,6 +147,7 @@ pub fn analyze(
             driftignore_present: driftignore.is_present(),
             commits_scanned: scanned,
             merge_commits_skipped: merges,
+            ignored_commits_skipped: ignored,
             diverged,
             commits,
             unattributed_paths,
@@ -161,6 +170,20 @@ fn resolve<'repo>(repo: &'repo gix::Repository, rev: &str) -> Result<gix::Commit
             rev: rev.to_string(),
             source: Box::new(source),
         })
+}
+
+/// Whether a commit carries a `Drift: ignore` trailer.
+///
+/// The token and value are matched ASCII case-insensitively, since gix normalizes
+/// neither: it only trims surrounding whitespace.
+fn has_ignore_trailer(commit: &gix::Commit<'_>) -> Result<bool> {
+    let message = commit.message().map_err(git)?;
+    Ok(message.body().is_some_and(|body| {
+        body.trailers().any(|trailer| {
+            trailer.token.eq_ignore_ascii_case(b"Drift")
+                && trailer.value.eq_ignore_ascii_case(b"ignore")
+        })
+    }))
 }
 
 /// The file paths a commit changed relative to its first parent.

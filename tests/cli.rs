@@ -202,6 +202,47 @@ fn a_rename_into_an_ignored_path_still_drifts_at_the_source() {
 }
 
 #[test]
+fn a_drift_ignore_trailer_excludes_its_commit() {
+    let (mut fixture, base) = baseline();
+    fixture.write("src/main.rs", "fn main() { println!(); }\n");
+    fixture.commit("Reformat main\n\nDrift: ignore");
+    fixture.write("src/other.rs", "// other\n");
+    let head = fixture.commit("Add other file");
+
+    let report = fixture.report(&base, &head);
+    assert_eq!(report["ignored_commits_skipped"], 1);
+    assert_eq!(report["commits_scanned"], 1);
+    assert_eq!(report["drift_commits"], serde_json::json!([head]));
+}
+
+#[test]
+fn a_drift_ignore_trailer_matches_regardless_of_case() {
+    let (mut fixture, base) = baseline();
+    fixture.write("src/main.rs", "fn main() { println!(); }\n");
+    fixture.commit("Reformat main\n\ndrift: IGNORE");
+    let head = fixture.head();
+
+    let report = fixture.report(&base, &head);
+    assert_eq!(report["ignored_commits_skipped"], 1);
+    assert_eq!(report["commits_scanned"], 0);
+}
+
+#[test]
+fn a_drift_ignore_commit_that_writes_its_own_content_leaves_an_unattributed_path() {
+    let (mut fixture, base) = baseline();
+    fixture.write("src/main.rs", "fn main() { println!(); }\n");
+    let head = fixture.commit("Reformat main\n\nDrift: ignore");
+
+    let report = fixture.report_with(&["--tree"], &base, &head);
+    assert_eq!(report["ignored_commits_skipped"], 1);
+    assert_eq!(report["drift_commit_count"], 0);
+    assert_eq!(
+        report["unattributed_paths"],
+        serde_json::json!(["src/main.rs"])
+    );
+}
+
+#[test]
 fn merges_are_skipped_but_their_commits_are_scanned() {
     let (mut fixture, base) = baseline();
     fixture.git(&["checkout", "-b", "side"]);

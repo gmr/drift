@@ -260,6 +260,7 @@ $ drift 1.1.0 main --pretty
   "diverged": false,
   "commits_scanned": 14,
   "merge_commits_skipped": 2,
+  "ignored_commits_skipped": 1,
   "drift_commit_count": 2,
   "drift_commits": [
     "0f1e2d3c4b5a69788796a5b4c3d2e1f098765432",
@@ -311,6 +312,7 @@ $ drift 1.1.0 main --pretty
 | `diverged`              | Whether each ref has moved since they last agreed                |
 | `commits_scanned`       | Non-merge commits classified                                     |
 | `merge_commits_skipped` | Merge commits traversed but not classified                       |
+| `ignored_commits_skipped` | Commits with a `Drift: ignore` trailer, traversed but not classified |
 | `drift_commit_count`    | How many of the scanned commits drifted                          |
 | `drift_commits`         | Their shas, newest first                                         |
 | `drift_authors`         | Distinct `Name <email>` of the drift commit authors, sorted      |
@@ -430,6 +432,12 @@ through it. They are counted under `merge_commits_skipped`. A conflict resolutio
 written into the merge commit itself is therefore never attributed to a commit:
 `--log` mode does not report it at all, and `--tree` mode reports the path under
 `unattributed_paths`. Make it a separate commit if it needs an author and an age.
+
+**Trailers.** A non-merge commit whose message carries a `Drift: ignore` trailer is
+traversed but never classified, the same as a merge: it is counted under
+`ignored_commits_skipped` instead of `commits_scanned`, and `--log` mode does not
+report it. In `--tree` mode a path it alone changed has no commit to carry it and
+reports under `unattributed_paths`.
 
 **Root commits.** A commit with no parent is diffed against the empty tree, so
 every file it adds counts.
