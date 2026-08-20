@@ -50,6 +50,7 @@ pub(crate) struct Summary {
     pub driftignore_present: bool,
     pub commits_scanned: usize,
     pub merge_commits_skipped: usize,
+    pub ignored_commits_skipped: usize,
     pub diverged: bool,
     pub commits: Vec<DriftCommit>,
     pub unattributed_paths: Vec<String>,
@@ -75,6 +76,8 @@ pub struct Report {
     pub commits_scanned: usize,
     /// Merge commits traversed but not classified.
     pub merge_commits_skipped: usize,
+    /// Commits carrying a `Drift: ignore` trailer, traversed but not classified.
+    pub ignored_commits_skipped: usize,
     pub drift_commit_count: usize,
     /// Drift commit shas, newest first.
     pub drift_commits: Vec<String>,
@@ -84,8 +87,8 @@ pub struct Report {
     pub drift_paths: Vec<String>,
     /// Drifting paths that no commit in the range explains, sorted. Only `tree` mode
     /// can produce these. Either the difference comes from the `from` side, which means
-    /// the refs diverged, or a merge commit wrote the content itself, which needs no
-    /// divergence because a merge is never classified.
+    /// the refs diverged, or a merge commit or a `Drift: ignore` commit wrote the
+    /// content itself, which needs no divergence because neither is ever classified.
     pub unattributed_paths: Vec<String>,
     pub oldest_drift: Option<DriftBound>,
     pub newest_drift: Option<DriftBound>,
@@ -106,6 +109,7 @@ impl Report {
             driftignore_present,
             commits_scanned,
             merge_commits_skipped,
+            ignored_commits_skipped,
             diverged,
             mut commits,
             unattributed_paths,
@@ -139,6 +143,7 @@ impl Report {
             diverged,
             commits_scanned,
             merge_commits_skipped,
+            ignored_commits_skipped,
             drift_commit_count: commits.len(),
             drift_commits: commits.iter().map(|c| c.sha.clone()).collect(),
             drift_authors: authors,
@@ -182,6 +187,7 @@ mod tests {
             driftignore_present: true,
             commits_scanned: 3,
             merge_commits_skipped: 1,
+            ignored_commits_skipped: 0,
             diverged: false,
             commits,
             unattributed_paths: Vec::new(),
